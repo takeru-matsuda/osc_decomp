@@ -21,3 +21,11 @@ References:
 [2] T. Matsuda and F. Komaki. Multivariate time series decomposition into oscillation components. Neural Computation, Vol. 29, pp. 2055--2075, 2017. 
 
 [3] T. Matsuda, F. Homae, H. Watanabe, G. Taga and F. Komaki. Oscillator decomposition of infant fNIRS data. PLOS Computational Biology, 2022.
+
+Requirements:
+
+MATLAB 2019 or later & Optimization Toolbox (for fminunc)
+
+Tips:
+
+Preprocessing by whitening is sometimes useful for numerical stability.
