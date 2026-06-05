@@ -4,7 +4,6 @@ function [ARwithnoise_param,ARwithnoise_AIC,AR_param,AR_AIC] = AR_fit(y,MAX_AR)
     ARwithnoise_AIC = zeros(1,MAX_AR);
     ARwithnoise_param = zeros(MAX_AR,MAX_AR+2);
     for ARdeg=1:MAX_AR
-%        [A,E] = AR_MLE(y,ARdeg);
         [A,E] = aryule(y,ARdeg);
         a = zeros(ARdeg,ARdeg);
         a(:,ARdeg) = -A(2:ARdeg+1);
@@ -19,11 +18,12 @@ function [ARwithnoise_param,ARwithnoise_AIC,AR_param,AR_AIC] = AR_fit(y,MAX_AR)
         end
         AR_AIC(ARdeg) = 2*AR_ll(y,log(1+c)-log(1-c))+2*(ARdeg+1);
         AR_param(ARdeg,1:ARdeg+1) = [A(2:ARdeg+1) E];
-        [A,E,R] = armyule(y,ARdeg);
-%        param = fminunc(@(param)ARwithnoise_ll(y,param),[A(2:ARdeg+1) log(E)-log(R)],options);
-        param = [A(2:ARdeg+1) log(E)-log(R)];
-        [mll,R] = ARwithnoise_ll(y,param);
+        
+        [A_noise, E_noise, R_noise] = armyule(y,ARdeg);
+        param = [A_noise(2:ARdeg+1) log(E_noise)-log(R_noise)];
+        [mll, R_hat] = ARwithnoise_ll(y,param);
+        
         ARwithnoise_AIC(ARdeg) = 2*mll+2*(ARdeg+2);
-        ARwithnoise_param(ARdeg,1:ARdeg+2) = [param(1:ARdeg) exp(param(ARdeg+1))*R R];
+        ARwithnoise_param(ARdeg,1:ARdeg+2) = [param(1:ARdeg) exp(param(ARdeg+1))*R_hat R_hat];
     end
 end

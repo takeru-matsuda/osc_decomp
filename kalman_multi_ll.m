@@ -1,5 +1,4 @@
-% profile likelihood (observation noise variance reduced by Kitagawa method)
-function [mll,grad,tau2hat] = osc_multi_prof_ll(Y,param,init_theta,return_grad)
+function [mll,tau2hat,grad] = kalman_multi_ll(param,init_theta,Y)
     J = size(Y,1);
     T = size(Y,2);
     K = length(param)/(2*J+1);
@@ -48,10 +47,10 @@ function [mll,grad,tau2hat] = osc_multi_prof_ll(Y,param,init_theta,return_grad)
     end
     mll = -ll;
     
-    if return_grad == false
-        grad = 0;
+    if nargout < 3
         return
     end
+    
     grad_F = zeros(2*K,2*K,(2*J+1)*K);
     grad_Q = zeros(2*K,2*K,(2*J+1)*K);
     grad_H = zeros(J,2*K,(2*J+1)*K);
@@ -113,5 +112,3 @@ function [mll,grad,tau2hat] = osc_multi_prof_ll(Y,param,init_theta,return_grad)
     grad = grad-J*T*grad_tau2hat/tau2hat/2;
     grad = -grad;
 end
-
-

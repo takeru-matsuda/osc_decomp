@@ -12,12 +12,12 @@ osc_f = osc_param(K,K+1:2*K);
 osc_sigma2 = osc_param(K,2*K+1:3*K);
 osc_c = osc_param(K,3*K+1:(2*J+1)*K);
 osc_tau2 = osc_param(K,(2*J+1)*K+1);
-hess = osc_ll_hess(Y,fs,osc_param(K,1:(2*J+1)*K+1));
+hess = kalman_ll_hess(Y,fs,osc_param(K,1:(2*J+1)*K+1));
 cov_est = inv(hess);
 fprintf('The number of oscillators is K=%d.\n',K);
 fprintf('The periods of K oscillators are:\n');
 for k=1:K
-    fprintf(' %.2f (95%% CI: [%.2f %.2f]) years\n',1./osc_f(k),1./(osc_f(k)+1.96*sqrt(cov_est(K+k,K+k))),1./(osc_f(k)-1.96*sqrt(cov_est(K+k,K+k))));
+    fprintf(' %.2f (95%% CI: [%.2f %.2f]) years\n',1./osc_f(k),max(0,1./osc_f(k)-1.96*sqrt(cov_est(K+k,K+k))/osc_f(k)^2),1./osc_f(k)+1.96*sqrt(cov_est(K+k,K+k))/osc_f(k)^2);
 end
 fprintf('The phase differences for K oscillators correspond to:\n');
 for k=1:K

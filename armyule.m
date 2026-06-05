@@ -1,4 +1,5 @@
 function [A,E,R] = armyule(y,ARdeg)
+    y = y(:)';
     T = length(y);
     acov = zeros(ARdeg+1,1);
     for k=1:ARdeg+1
@@ -12,9 +13,17 @@ function [A,E,R] = armyule(y,ARdeg)
     c = acov(2:ARdeg+1);
     eigs = eig([C flipud(c); fliplr(c') acov(1)]);
     options = optimset('Display','off');
-    R = fminbnd(@(R)ARwithnoise_ll(y,[-(C-R*eye(ARdeg))\c; log(acov(1)-R-((C-R*eye(ARdeg))\c)'*acov(2:ARdeg+1))-log(R)]'),0,min(eigs),options);
+    
+    R = fminbnd(@(R_val) obj_fun(R_val, y, C, c, acov, ARdeg), 0, min(eigs), options);
+    
     A = (C-R*eye(ARdeg))\c;
     E = acov(1)-R-A'*acov(2:ARdeg+1);
     A = [1 -A'];
 end
 
+function mll = obj_fun(R_val, y, C, c, acov, ARdeg)
+    A_temp = (C - R_val * eye(ARdeg)) \ c;
+    log_E = log(acov(1) - R_val - A_temp' * acov(2:ARdeg+1));
+    param = [-A_temp; log_E - log(R_val)]';
+    mll = ARwithnoise_ll(y, param);
+end

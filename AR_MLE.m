@@ -30,4 +30,3 @@ function [A,E] = AR_MLE(y,ARdeg)
     end
     A = [1 -a(:,ARdeg)'];
 end
-

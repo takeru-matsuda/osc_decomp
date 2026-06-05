@@ -1,4 +1,4 @@
-function [hess,grad,mll] = osc_ll_hess(Y,fs,param)
+function [hess,grad,mll] = kalman_ll_hess(Y,fs,param)
     J = size(Y,1);
     T = size(Y,2);
     K = (length(param)-1)/(3+2*(J-1));
@@ -45,7 +45,6 @@ function [hess,grad,mll] = osc_ll_hess(Y,fs,param)
     end
     grad_R = zeros(J,J,length(param));
     grad_R(:,:,end) = eye(J);
-
     x_pred1 = zeros(2*K,1);
     V_pred1 = zeros(2*K,2*K);
     x_filt = zeros(2*K,1);
@@ -72,8 +71,9 @@ function [hess,grad,mll] = osc_ll_hess(Y,fs,param)
     for t=1:T
         err = Y(:,t)-H*x_pred1;
         err_cov = H*V_pred1*H'+R;
+        err_cov = (err_cov + err_cov') / 2;
         inv_err_cov = inv(err_cov);
-        ll = ll-log(det(err_cov))/2-err'*inv_err_cov*err/2;
+        ll = ll-real(log(det(err_cov)))/2-real(err'*inv_err_cov*err)/2;
         grad_err = zeros(J,length(param));
         for i=1:length(param)
             grad_err(:,i) = -H*grad_x_pred1(:,i)-grad_H(:,:,i)*x_pred1;
@@ -123,6 +123,7 @@ function [hess,grad,mll] = osc_ll_hess(Y,fs,param)
         end
         x_filt = x_pred1 + Kg*err;
         V_filt = (eye(2*K)-Kg*H)*V_pred1;
+        V_filt = (V_filt + V_filt') / 2;
         for i=1:length(param)
             grad_x_filt(:,i) = grad_x_pred1(:,i) + Kg*grad_err(:,i) + grad_Kg(:,:,i)*err;
             grad_V_filt(:,:,i) = grad_V_pred1(:,:,i) - grad_Kg(:,:,i)*H*V_pred1 - Kg*grad_H(:,:,i)*V_pred1 - Kg*H*grad_V_pred1(:,:,i);
@@ -131,12 +132,13 @@ function [hess,grad,mll] = osc_ll_hess(Y,fs,param)
             for j=i:length(param)
                 hess_x_filt(:,i,j) = hess_x_pred1(:,i,j) + grad_Kg(:,:,i)*grad_err(:,j) + grad_Kg(:,:,j)*grad_err(:,i) + Kg*hess_err(:,i,j) + hess_Kg(:,:,i,j)*err;
                 hess_x_filt(:,j,i) = hess_x_filt(:,i,j);
-                hess_V_filt(:,:,i,j) = hess_V_pred1(:,:,i,j) - hess_Kg(:,:,i,j)*H*V_pred1 - grad_Kg(:,:,i)*grad_H(:,:,j)*V_pred1 - grad_Kg(:,:,i)*H*grad_V_pred1(:,:,j) - grad_Kg(:,:,j)*grad_H(:,:,i)*V_pred1 - Kg*grad_H(:,:,i)*grad_V_pred1(:,:,j) - Kg*grad_H(:,:,i)*grad_V_pred1(:,:,j) - grad_Kg(:,:,j)*H*grad_V_pred1(:,:,i) - Kg*grad_H(:,:,j)*grad_V_pred1(:,:,i) - Kg*H*hess_V_pred1(:,:,i,j);
+                hess_V_filt(:,:,i,j) = hess_V_pred1(:,:,i,j) - hess_Kg(:,:,i,j)*H*V_pred1 - grad_Kg(:,:,i)*grad_H(:,:,j)*V_pred1 - grad_Kg(:,:,i)*H*grad_V_pred1(:,:,j) - grad_Kg(:,:,j)*grad_H(:,:,i)*V_pred1 - Kg*grad_H(:,:,i)*grad_V_pred1(:,:,j) - Kg*grad_H(:,:,j)*grad_V_pred1(:,:,i) - grad_Kg(:,:,j)*H*grad_V_pred1(:,:,i) - Kg*grad_H(:,:,j)*grad_V_pred1(:,:,i) - Kg*H*hess_V_pred1(:,:,i,j);
                 hess_V_filt(:,:,j,i) = hess_V_filt(:,:,i,j);
             end
         end
         x_pred1 = F*x_filt;
         V_pred1 = F*V_filt*F'+Q;
+        V_pred1 = (V_pred1 + V_pred1') / 2;
         for i=1:length(param)
             grad_x_pred1(:,i) = F*grad_x_filt(:,i)+grad_F(:,:,i)*x_filt;
             grad_V_pred1(:,:,i) = F*grad_V_filt(:,:,i)*F' + grad_F(:,:,i)*V_filt*F' + F*V_filt*grad_F(:,:,i)' + grad_Q(:,:,i);
@@ -145,18 +147,20 @@ function [hess,grad,mll] = osc_ll_hess(Y,fs,param)
             for j=i:length(param)
                 hess_x_pred1(:,i,j) = grad_F(:,:,i)*grad_x_filt(:,j) + grad_F(:,:,j)*grad_x_filt(:,i) + F*hess_x_filt(:,i,j) + hess_F(:,:,i,j)*x_filt;
                 hess_x_pred1(:,j,i) = hess_x_pred1(:,i,j);
-                hess_V_pred1(:,:,i,j) = grad_F(:,:,i)*grad_V_filt(:,:,j)*F' + grad_F(:,:,j)*grad_V_filt(:,:,i)*F' + F*hess_V_filt(:,:,i,j)*F' + F*grad_V_filt(:,:,i)*grad_F(:,:,j)' + F*grad_V_filt(:,:,j)*grad_F(:,:,i)' + hess_F(:,:,i,j)*V_pred1*F' + grad_F(:,:,i)*V_pred1*grad_F(:,:,j)'+ grad_F(:,:,j)*V_pred1*grad_F(:,:,i)' + F*V_pred1*hess_F(:,:,i,j)';
+                hess_V_pred1(:,:,i,j) = grad_F(:,:,i)*grad_V_filt(:,:,j)*F' + grad_F(:,:,j)*grad_V_filt(:,:,i)*F' + F*hess_V_filt(:,:,i,j)*F' + F*grad_V_filt(:,:,i)*grad_F(:,:,j)' + F*grad_V_filt(:,:,j)*grad_F(:,:,i)' + hess_F(:,:,i,j)*V_filt*F' + grad_F(:,:,i)*V_filt*grad_F(:,:,j)'+ grad_F(:,:,j)*V_filt*grad_F(:,:,i)' + F*V_filt*hess_F(:,:,i,j)';
                 hess_V_pred1(:,:,j,i) = hess_V_pred1(:,:,i,j);
             end
         end
     end
-    grad(K+1:2*K) = grad(K+1:2*K)*2*pi/fs;
-    hess(K+1:2*K,:) = hess(K+1:2*K,:)*2*pi/fs;
-    hess(:,K+1:2*K) = hess(:,K+1:2*K)*2*pi/fs;
     
-    mll = -ll;
-    grad = -grad;
-    hess = -hess;
+    scale = 2*pi/fs;
+    grad(K+1:2*K) = grad(K+1:2*K)*scale;
+    for k=K+1:2*K
+        hess(k,:) = hess(k,:)*scale;
+        hess(:,k) = hess(:,k)*scale;
+    end
+    
+    mll = real(-ll);
+    grad = real(-grad);
+    hess = real(-hess);
 end
-
-
