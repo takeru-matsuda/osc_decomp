@@ -4,7 +4,7 @@ The main functions are osc_decomp, osc_plot, and osc_phase_plot.
 
 Please see demo_uni.m and demo_multi.m for their usage.
 
-demo_uni.m is the script for decomposing the Wolfer sunspot data [1].
+demo_uni.m is the script for decomposing the Canadian lynx data [1].
 
 demo_multi.m is the script for decomposing the north/south sunspot data [2].
 
