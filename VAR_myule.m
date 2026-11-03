@@ -3,9 +3,7 @@ function [A,E,r,mll] = VAR_myule(Y,ARdeg)
     T = size(Y,2);
     acov = zeros(d,d,ARdeg+1);
     
-    if any(mean(Y,2) > 1e-12)
-        Y = Y - mean(Y,2);
-    end
+    Y = Y - mean(Y,2);
     
     for k=1:ARdeg+1
         acov(:,:,k) = Y(:,1:T-k+1)*Y(:,k:T)'/T;
@@ -29,3 +27,4 @@ function [A,E,r,mll] = VAR_myule(Y,ARdeg)
     [~,A,E] = VAR_myule_ll(Y,r,C,c);
     A = [eye(d) -A];
 end
+

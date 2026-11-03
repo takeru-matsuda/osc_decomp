@@ -12,8 +12,9 @@ function conf = angle_conf_MC(mu,Sigma,prob,seeds)
     
     conf = [phi + min(selected_phases), phi + max(selected_phases)];
     
-    conf = wrapToPi(conf);
+    conf = atan2(sin(conf),cos(conf));
     if conf(1) > conf(2)
         conf(2) = conf(2) + 2*pi;
     end
 end
+

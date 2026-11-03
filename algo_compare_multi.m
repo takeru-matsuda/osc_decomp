@@ -46,16 +46,5 @@ tic
 [osc_param_whittle_qn1_100,osc_AIC_whittle_qn1_100] = osc_decomp_multi(Y,fs,MAX_OSC,'quasi-newton_grad1','whittle',100);
 time_whittle_qn1_100 = toc
 osc_AIC_whittle_qn1_100
-tic
-[osc_param_whittle_adam1,osc_AIC_whittle_adam1] = osc_decomp_multi(Y,fs,MAX_OSC,'adam','whittle',1);
-time_whittle_adam1 = toc
-osc_AIC_whittle_adam1
-tic
-[osc_param_whittle_adam10,osc_AIC_whittle_adam10] = osc_decomp_multi(Y,fs,MAX_OSC,'adam','whittle',10);
-time_whittle_adam10 = toc
-osc_AIC_whittle_adam10
-tic
-[osc_param_whittle_adam100,osc_AIC_whittle_adam100] = osc_decomp_multi(Y,fs,MAX_OSC,'adam','whittle',100);
-time_whittle_adam100 = toc
-osc_AIC_whittle_adam100
 save('algo_compare_multi')
+

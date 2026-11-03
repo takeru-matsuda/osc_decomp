@@ -1,4 +1,6 @@
 function [mll,tau2hat,grad] = kalman_multi_ll(param,init_theta,Y)
+    param = param(:);
+    init_theta = init_theta(:);
     J = size(Y,1);
     T = size(Y,2);
     K = length(param)/(2*J+1);
@@ -112,3 +114,4 @@ function [mll,tau2hat,grad] = kalman_multi_ll(param,init_theta,Y)
     grad = grad-J*T*grad_tau2hat/tau2hat/2;
     grad = -grad;
 end
+

@@ -6,16 +6,8 @@ function osc_spectrum_plot(Y,fs,osc_a,osc_f,osc_sigma2,osc_tau2,osc_c)
         osc_c(1:2:end) = 1;
     end
     T = size(Y,2);
-    H = zeros(J,2*K);
-    H(1,1:2:2*K) = 1;
-    kk = 1;
-    for k=1:K
-        for j=2:J
-            H(j,2*k-1:2*k) = osc_c(kk:kk+1);
-            kk = kk+2;
-        end
-    end
-    
+    H = osc_observation_matrix(osc_c,J,K);
+
     m = ceil(T/2);
     freq_idx = (1:m)';
     freq_rad = 2*pi*freq_idx/T;
@@ -28,13 +20,8 @@ function osc_spectrum_plot(Y,fs,osc_a,osc_f,osc_sigma2,osc_tau2,osc_c)
         for k=1:K
             a = osc_a(k);
             theta = 2*pi*osc_f(k)/fs;
-            A = (1-2*a^2*cos(theta)^2+a^4*cos(2*theta))/a/(a^2-1)/cos(theta);
-            b = (A-2*a*cos(theta)+sqrt((A-2*a*cos(theta))^2-4))/2;
-            
-            H_norm2 = norm(H(j,2*k-1:2*k))^2;
-            numer = abs(1 + b * exp(-1i * freq_rad)).^2;
-            denom = abs(1 - 2*a*cos(theta)*exp(-1i * freq_rad) + a^2 * exp(-1i * 2 * freq_rad)).^2;
-            spect(k,:) = -H_norm2 * osc_sigma2(k) * a * cos(theta) / b .* numer' ./ denom' / (2*pi);
+            S = osc_component_spectrum(a,theta,H(j,2*k-1:2*k),freq_rad);
+            spect(k,:) = osc_sigma2(k)*real(reshape(S,1,[]));
         end
         noise = (osc_tau2 / (2*pi)) * ones(1, m);
         
@@ -58,3 +45,4 @@ function osc_spectrum_plot(Y,fs,osc_a,osc_f,osc_sigma2,osc_tau2,osc_c)
         set(gca, 'FontSize', 16);
     end
 end
+

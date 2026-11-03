@@ -47,6 +47,5 @@ function [mll,tau2hat,grad] = whittle_uni_ll(param,init_theta,freq,p)
         grad_w = sum(weight .* dsp_dw, 1)';
         
         grad = [grad_u; grad_v; grad_w];
-        grad = -grad;
     end
 end

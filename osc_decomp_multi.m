@@ -3,10 +3,11 @@ function [osc_param,osc_AIC,osc_mean,osc_cov,osc_phase] = osc_decomp_multi(Y,fs,
 %    Y:             Multivariate time series (J x T)
 %    fs:            Sampling frequency (scalar)
 %    MAX_OSC:       Maximum number of oscillators (integer), default = 5
-%    algorithm:     Optimization algorithm (string), default = 'quasi-newton_grad0'
-%                   Supported: 'quasi-newton_grad0', 'quasi-newton_grad1', 'trust-region', 'adam'
+%    algorithm:     Optimization algorithm (string), default = 'quasi-newton_grad1'
+%                   Supported: 'quasi-newton_grad0', 'quasi-newton_grad1', 'trust-region'
 %    obj_func:      Objective function (string), default = 'whittle'
-%                   Supported: 'kalman', 'whittle'
+%                   Supported: 'kalman', 'whittle'; explicit choices are honored.
+%                   If omitted, short series use Kalman (see README).
 %    ss_interval:   Subsampling interval for frequency domain (integer), default = 1
 %                   (Only valid when obj_func = 'whittle')
 %
@@ -32,12 +33,18 @@ function [osc_param,osc_AIC,osc_mean,osc_cov,osc_phase] = osc_decomp_multi(Y,fs,
         MAX_OSC (1,1) {mustBeInteger(MAX_OSC),mustBePositive(MAX_OSC)} = 5
         algorithm = 'quasi-newton_grad1'
         obj_func = 'whittle'
-        ss_interval = 1
+        ss_interval (1,1) {mustBeInteger,mustBePositive} = 1
+    end
+
+    supported = {'quasi-newton_grad0','quasi-newton_grad1','trust-region'};
+    if ~any(strcmpi(algorithm,supported))
+        error('osc_decomp:UnsupportedAlgorithm', ...
+            'Supported algorithms: quasi-newton_grad0, quasi-newton_grad1, trust-region.');
     end
     
 	J = size(Y, 1);
 	T = size(Y, 2);
-    if T<200
+    if nargin < 5 && T<200
         obj_func = 'kalman';
     end
     
@@ -115,18 +122,12 @@ function [osc_param,osc_AIC,osc_mean,osc_cov,osc_phase] = osc_decomp_multi(Y,fs,
         m = floor(T/2) + 1;
         freq0 = 2*pi*(0:m-1)'/T;
         P = zeros(J, J, length(freq0), K+1);
-	    for k = 1:K
-    	    a = init_a(k);
-        	theta = init_theta(k);
-            H = [1 0; reshape(init_c(2*(J-1)*(k-1)+1:2*(J-1)*k), J-1, 2)];
-        	for i = 1:length(freq0)
-                A = abs(1 - a*exp(1i*(theta - freq0(i))))^-2;
-                B = abs(1 - a*exp(1i*(theta + freq0(i))))^-2;
-            	P(:,:,i,k) = H * [A+B, 1i*(A-B); -1i*(A-B), A+B] * H' / (4*pi);
-    	    end
+        H0 = osc_observation_matrix(init_c,J,K);
+        for k=1:K
+            P(:,:,:,k) = osc_component_spectrum(init_a(k),init_theta(k),H0(:,2*k-1:2*k),freq0);
         end
-     	for i = 1:length(freq0)
-            P(:,:,i,K+1) = eye(J) / (2*pi);
+        for i=1:length(freq0)
+            P(:,:,i,K+1) = eye(J)/(2*pi);
         end
         Y_fft = fft(Y, [], 2);
 	    p_full = zeros(J, J, length(freq0));
@@ -169,53 +170,6 @@ function [osc_param,osc_AIC,osc_mean,osc_cov,osc_phase] = osc_decomp_multi(Y,fs,
                 options = optimoptions('fminunc','Algorithm','trust-region','MaxFunEvals',10000,'SpecifyObjectiveGradient',true);
                 param = fminunc(obj, param0, options);
                 
-            case 'adam'
-                param = param0;
-                N_freq = length(freq0);
-                subsample_size = max(10, ceil(N_freq / ss_interval));
-                
-                maxIters = 2000;
-                minIters = 200;
-                tol = 1e-5;
-                
-                lr = 0.01; 
-                beta1 = 0.9; beta2 = 0.999; eps_adam = 1e-8;
-                
-                m_adam = zeros(size(param));
-                v_adam = zeros(size(param));
-                
-                mll_history = zeros(maxIters, 1);
-                
-                for t = 1:maxIters
-                    idx = randi([2, N_freq], subsample_size, 1);
-                    freq_batch = freq0(idx);
-                    p_batch = p_full(:,:,idx);
-                    
-                    [mll_t, ~, grad] = whittle_multi_ll(param, init_theta, freq_batch, p_batch);
-                    mll_history(t) = mll_t;
-                    
-                    if norm(grad) > 5.0
-                        grad = grad * (5.0 / norm(grad));
-                    end
-                    
-                    m_adam = beta1 * m_adam + (1 - beta1) * grad;
-                    v_adam = beta2 * v_adam + (1 - beta2) * (grad.^2);
-                    
-                    mhat = m_adam / (1 - beta1^t);
-                    vhat = v_adam / (1 - beta2^t);
-                    
-                    param = param - lr * mhat ./ (sqrt(vhat) + eps_adam);
-                    
-                    if t >= minIters && mod(t, 10) == 0
-                        past_mean = mean(mll_history(t-19:t-10));
-                        curr_mean = mean(mll_history(t-9:t));
-                        if abs(past_mean - curr_mean) < tol
-                            break;
-                        end
-                    end
-                end
-                fprintf('Adam converged in %d iterations',t)
-                
             otherwise
                 error('osc_decomp_multi: Unsupported optimization algorithm.');
         end
@@ -223,19 +177,7 @@ function [osc_param,osc_AIC,osc_mean,osc_cov,osc_phase] = osc_decomp_multi(Y,fs,
         param = param(:)';
     	[mll,osc_tau2] = kalman_multi_ll(param,init_theta,Y);
     	osc_AIC(K) = 2*mll + 2*((2*J+1)*K+1);
-        param(K+1:2*K) = init_theta + tanh(param(K+1:2*K))*pi;
-	    [~,I] = sort(abs(param(K+1:2*K)));
-    	osc_a = (tanh(param(I))+1)/2;
-    	osc_f = abs(param(K+I)) * fs / (2*pi);
-    	osc_sigma2 = exp(param(2*K+I)) * osc_tau2;
-        
-        tmp = zeros(1, 2*(J-1)*K);
-        for k = 1:K
-            tmp((k-1)*2*(J-1)+1 : k*2*(J-1)) = I(k) - 1;
-        end
-        osc_c = param(3*K + tmp*2*(J-1) + repmat(1:2*(J-1), 1, K));
-		
-        osc_param(K, 1:(2*J+1)*K+1) = [osc_a osc_f osc_sigma2 osc_c osc_tau2];
+        osc_param(K,1:(2*J+1)*K+1) = osc_parameter_output(param,init_theta,osc_tau2,fs,J);
         
         [osc_mean(1:2*K,:,K), osc_cov(1:2*K,1:2*K,:,K)] = osc_smooth(Y, fs, osc_param(K, 1:(2*J+1)*K+1));
         
@@ -307,3 +249,4 @@ function [mll, grad] = whittle_multi_ll_wrapper(param, init_theta, freq, P)
         mll = whittle_multi_ll(param, init_theta, freq, P);
     end
 end
+

@@ -1,4 +1,6 @@
 function [mll, tau2hat, grad] = kalman_uni_ll(param,init_theta,y)
+    param = param(:);
+    init_theta = init_theta(:);
     T = length(y);
     K = length(param) / 3;
     
@@ -69,7 +71,7 @@ function [mll, tau2hat, grad] = kalman_uni_ll(param,init_theta,y)
     grad_F = zeros(2*K, 2*K, 3*K);
     grad_Q = zeros(2*K, 2*K, 3*K);
     for k = 1:K
-        grad_F(2*k-1:2*k, 2*k-1:2*k, k) = (1 / (2 * cosh(a(k))^2)) * [cos(theta(k)) -sin(theta(k)); sin(theta(k)) cos(theta(k))];
+        grad_F(2*k-1:2*k, 2*k-1:2*k, k) = (1 / (2 * cosh(param(k))^2)) * [cos(theta(k)) -sin(theta(k)); sin(theta(k)) cos(theta(k))];
         grad_F(2*k-1:2*k, 2*k-1:2*k, K+k) = (pi * a(k) / cosh(param(K+k))^2) * [-sin(theta(k)) -cos(theta(k)); cos(theta(k)) -sin(theta(k))];
         grad_Q(2*k-1:2*k, 2*k-1:2*k, 2*K+k) = sigma2(k) * eye(2);
     end
@@ -77,7 +79,7 @@ function [mll, tau2hat, grad] = kalman_uni_ll(param,init_theta,y)
     grad_x_pred1 = zeros(2*K, 3*K);
     grad_V_pred1 = zeros(2*K, 2*K, 3*K);
     for k = 1:K
-        grad_V_pred1(2*k-1:2*k, 2*k-1:2*k, k) = (a(k) * sigma2(k)) / (cosh(a(k))^2 * (1 - a(k)^2)^2) * eye(2);
+        grad_V_pred1(2*k-1:2*k, 2*k-1:2*k, k) = (a(k) * sigma2(k)) / (cosh(param(k))^2 * (1 - a(k)^2)^2) * eye(2);
         grad_V_pred1(2*k-1:2*k, 2*k-1:2*k, 2*K+k) = sigma2(k) / (1 - a(k)^2) * eye(2);
     end
     
@@ -133,3 +135,4 @@ function [mll, tau2hat, grad] = kalman_uni_ll(param,init_theta,y)
     grad = grad - (T / (2 * tau2hat)) * grad_Rhat;
     grad = -grad;
 end
+
