@@ -1,5 +1,5 @@
 function [A,E] = AR_MLE(y,ARdeg)
-    A = aryule(y,ARdeg);
+    A = AR_yule_walker(y,ARdeg);
     a = zeros(ARdeg,ARdeg);
     a(:,ARdeg) = -A(2:ARdeg+1);
     for m=ARdeg:-1:2
@@ -30,3 +30,4 @@ function [A,E] = AR_MLE(y,ARdeg)
     end
     A = [1 -a(:,ARdeg)'];
 end
+

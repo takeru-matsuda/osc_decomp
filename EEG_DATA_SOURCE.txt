@@ -1,0 +1,114 @@
+EEG example for OSC-DECOMP
+=========================
+
+Run demo_eeg.m from the OSC-DECOMP directory. The supplied MAT file avoids
+any need to download or read EDF files when running the demo.
+
+Data source
+-----------
+EEGExampleData.mat contains an extracted subset of:
+  Gerwin Schalk (2009). EEG Motor Movement/Imagery Dataset, version 1.0.0.
+  PhysioNet. DOI: https://doi.org/10.13026/C28G6P
+  Dataset: https://physionet.org/content/eegmmidb/1.0.0/
+  Original file:
+  https://physionet.org/files/eegmmidb/1.0.0/S001/S001R02.edf
+
+Original EDF SHA-256:
+31a95e0a880e6c3d89960d9d62c144f24cc4e9f5d7e93c7f864ef61cd49e847e
+
+Subject: S001
+Run: R02 (eyes-closed resting baseline)
+Channel: Oz (exact EDF label: Oz..; one-based signal index: 62)
+Sampling frequency: 160 Hz
+Physical units: microvolts (uV)
+Segment: [10,20) seconds relative to the beginning of the EDF recording
+Samples: 1601 through 3200 inclusive in MATLAB indexing (1600 samples)
+
+The first subject, the closed-eyes baseline, a posterior midline channel,
+and a fixed 10-second window after the first 10 seconds were selected for
+a compact usage example. No search across subjects, channels, or windows
+was performed to maximize an oscillation peak or optimize the result.
+
+MAT file and preprocessing
+-------------------------
+eeg      : 1 x 1600 double, the extracted EEG in physical microvolts
+fs       : sampling frequency in Hz
+metadata : source, segment, units, attribution, and license information
+
+EDF digital values were converted using the header calibration. For this
+channel the digital and physical bounds are both [-8092,8092], so the
+calibration is exactly one microvolt per digital unit with zero offset.
+The MAT file contains the uncentered physical values.
+
+The demo subtracts the segment mean before calling osc_decomp. No other
+preprocessing is added: no band-pass/notch filtering, detrending,
+resampling, rereferencing, or artifact rejection. The EDF prefilter field
+reads "HP:0Hz LP:0Hz N:0Hz"; this does not establish the absence of all
+filtering in the original acquisition system.
+
+Analysis and plots
+------------------
+The demo fits K=1,...,6 with quasi-newton_grad1 and the Whittle objective,
+using every available frequency bin (ss_interval=1). It selects the
+minimum of the AIC values returned by osc_decomp. In this implementation,
+those values use the Kalman likelihood evaluated with the fitted
+oscillation parameters and a reprofiled noise scale.
+
+Four figures show:
+  1. The mean-centered input and AIC differences from the minimum.
+  2. Smoothed component waveforms with pointwise 95% intervals.
+  3. Component phases with pointwise 95% intervals, for the first 3 seconds
+     of the extracted segment. Smoothing uses the entire 10-second segment.
+     Zero-frequency components are identified as non-oscillatory background;
+     their phase curves are omitted and not interpreted as oscillation phase.
+  4. The periodogram, individual component spectra, noise, and their sum.
+
+The waveform and phase intervals condition on fitted parameters and K;
+they do not include parameter-estimation or model-selection uncertainty.
+Phase intervals use 1000 Monte Carlo draws with a fixed seed. Phase is
+less informative where a component's amplitude is small. The phase plot
+uses the package's circular-interval drawing convention, including wrapping
+at -pi and pi. Plot time follows the package convention (1:T)/fs.
+
+The spectrum's horizontal axis is Hz. Its density is per radian/sample,
+matching osc_spectrum_plot; it is not a density per Hz. Oscillator center
+frequencies are fitted from the data rather than fixed to EEG bands.
+The example illustrates software usage on one segment, not validation
+of physiological component identities or performance across subjects.
+
+Requires MATLAB with Optimization Toolbox. Signal Processing Toolbox,
+Statistics and Machine Learning Toolbox, Mapping Toolbox, and external
+EEG toolboxes are not required.
+
+Data attribution and license
+----------------------------
+Contains information from the EEG Motor Movement/Imagery Dataset,
+https://physionet.org/content/eegmmidb/1.0.0/, which is made available
+under the Open Data Commons Attribution License (ODC-By) v1.0:
+https://opendatacommons.org/licenses/by/1-0/
+
+The extracted dataset in EEGExampleData.mat is supplied under the same
+ODC-By v1.0 terms. Retain this notice and the license URI when distributing
+the data, and attribute the source when sharing derived figures or results.
+The modifications are the extraction and format conversion described above.
+This data license does not change the license of the OSC-DECOMP source code.
+
+Dataset creators: Gerwin Schalk and colleagues, BCI R&D Program,
+Wadsworth Center, New York State Department of Health. Data collection:
+W. A. Sarnacki; compilation: Aditya Joshi; experimental design:
+D. J. McFarland; oversight: J. R. Wolpaw.
+
+Citations requested by the data provider
+---------------------------------------
+Schalk, G. (2009). EEG Motor Movement/Imagery Dataset (version 1.0.0).
+PhysioNet. https://doi.org/10.13026/C28G6P
+
+Schalk, G., McFarland, D. J., Hinterberger, T., Birbaumer, N., and
+Wolpaw, J. R. (2004). BCI2000: A General-Purpose Brain-Computer Interface
+(BCI) System. IEEE Transactions on Biomedical Engineering,
+51(6), 1034-1043. https://pubmed.ncbi.nlm.nih.gov/15188875/
+
+Pollard, T., Moody, B. E., Lehman, L., Gow, B., Fernandes, C., Xie, C.,
+Johnson, A., Mark, R. G., and Heldt, T. (2026). PhysioNet as a global
+platform for biomedical research. Nature Health.
+https://doi.org/10.1038/s44360-026-00096-z

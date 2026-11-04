@@ -5,7 +5,7 @@ function []=osc_phase_plot(osc_phase,osc_mean,osc_cov,fs,K,conf,nmc)
         osc_cov
         fs (1,1)
         K (1,1) {mustBeInteger(K),mustBePositive(K)}
-        conf (1,1) = 2*normcdf(1)-1 % one sigma
+        conf (1,1) = erf(1/sqrt(2)) % one sigma
         nmc (1,1) = 10^3;
     end
     T = size(osc_mean,2);
@@ -29,3 +29,4 @@ function []=osc_phase_plot(osc_phase,osc_mean,osc_cov,fs,K,conf,nmc)
         set(ax,'YTickLabel',{'-3.14', '0', '3.14'});
     end
 end
+
